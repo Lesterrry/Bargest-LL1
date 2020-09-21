@@ -31,8 +31,8 @@ void setup() {
 
   digitalWrite(motorA, HIGH);
   digitalWrite(motorB, HIGH);
-  //analogWrite(setterA, 0);
-  //analogWrite(setterB, 0);
+  analogWrite(setterA, 0);
+  analogWrite(setterB, 0);
   
   Serial.begin(9600);
   //locked = EEPROM.read(0) == 1 ? true : false;
@@ -41,12 +41,12 @@ void setup() {
 void turn(Direction dir){
   switch (dir){
     case right:
-      digitalWrite(motorA, LOW);
-      digitalWrite(motorB, HIGH);
-      break;
-    case left:
       digitalWrite(motorB, LOW);
       digitalWrite(motorA, HIGH);
+      break;
+    case left:
+      digitalWrite(motorA, LOW);
+      digitalWrite(motorB, HIGH);
       break;
   }
 }
@@ -57,31 +57,41 @@ void freeze(){
 }
 
 void lock(){
+  turn(right);
+  uint32_t stamp = millis();
+  while(millis() < stamp + 7000){
+    if(analogRead(sensorB) == 0){
+      delay(50);
+      if(analogRead(sensorB) == 0){
+        break;
+      }
+    }
+  }
+  freeze();
 
-  EEPROM.write(0,1);
-  locked = true;
+  //EEPROM.write(0,1);
+  //locked = true;
 }
 
 void unlock(){
-
-  EEPROM.write(0,0);
-  locked = false;
+  int x = 0;
+  uint32_t stamp = millis();
+  turn(left);
+  while(millis() < stamp + 6000){
+    delay(30);
+    x = analogRead(sensorA);
+    if(x > 100){
+      break;
+    }
+  }
+  freeze();
+  
+  //EEPROM.write(0,0);
+  //locked = false;
 }
 
 void loop(){
-  if(analogRead(sensorB) == 0){
-    delay(50);
-    if(analogRead(sensorB) == 0){
-      Serial.println("100");
-    }
-    else{
-      Serial.println("0");
-    }
-  }else{
-    Serial.println("0");
-  }
-  //Serial.println(analogRead(sensorB));
-  //Serial.println(digitalRead(sensorB));
+
   if (Serial.available() > 0){
     data = Serial.readString();
     if(data == "lock" || data == "1"){
@@ -92,16 +102,6 @@ void loop(){
     }
     else if(data == "dump" || data == "2"){
         Serial.println(locked);
-    }
-    else if(data == "5"){
-        turn(left);
-        delay(500);
-        freeze();
-    }
-    else if(data == "6"){
-        turn(right);
-        delay(500);
-        freeze();
     }
     
     delay(100);
